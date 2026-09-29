@@ -24,6 +24,44 @@ export default function Home() {
     whatsappNumber: '5551999999999',
   });
 
+  // Carregar do localStorage ao iniciar
+  React.useEffect(() => {
+    try {
+      const savedProducts = localStorage.getItem('gs_products');
+      if (savedProducts) setProducts(JSON.parse(savedProducts));
+
+      const savedSettings = localStorage.getItem('gs_settings');
+      if (savedSettings) setStoreSettings(JSON.parse(savedSettings));
+
+      const savedOrders = localStorage.getItem('gs_orders');
+      if (savedOrders) setOrders(JSON.parse(savedOrders));
+    } catch (e) {
+      console.error('Erro ao ler localStorage', e);
+    }
+  }, []);
+
+  // Salvar no localStorage sempre que houver alterações
+  const handleUpdateStoreSettings = (newSettings: typeof storeSettings) => {
+    setStoreSettings(newSettings);
+    try {
+      localStorage.setItem('gs_settings', JSON.stringify(newSettings));
+    } catch (e) {
+      console.error('Erro ao salvar settings no localStorage', e);
+    }
+  };
+
+  const handleUpdateProducts = (updater: (prev: Product[]) => Product[]) => {
+    setProducts((prev) => {
+      const updated = updater(prev);
+      try {
+        localStorage.setItem('gs_products', JSON.stringify(updated));
+      } catch (e) {
+        console.error('Erro ao salvar produtos no localStorage', e);
+      }
+      return updated;
+    });
+  };
+
   // Modals state
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -72,13 +110,21 @@ export default function Home() {
   };
 
   const handleOrderCompleted = (newOrder: OrderData) => {
-    setOrders((prev) => [newOrder, ...prev]);
+    setOrders((prev) => {
+      const updated = [newOrder, ...prev];
+      try {
+        localStorage.setItem('gs_orders', JSON.stringify(updated));
+      } catch (e) {
+        console.error('Erro ao salvar pedidos no localStorage', e);
+      }
+      return updated;
+    });
     setCart([]); // Clear cart
   };
 
-  // Admin operations
+  // Admin operations com persistência
   const handleToggleSoldOut = (productId: string) => {
-    setProducts((prev) =>
+    handleUpdateProducts((prev) =>
       prev.map((p) =>
         p.id === productId ? { ...p, isSoldOut: !p.isSoldOut } : p
       )
@@ -86,7 +132,7 @@ export default function Home() {
   };
 
   const handleAddProduct = (newProd: Product) => {
-    setProducts((prev) => [newProd, ...prev]);
+    handleUpdateProducts((prev) => [newProd, ...prev]);
   };
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -239,7 +285,7 @@ export default function Home() {
         products={products}
         orders={orders}
         storeSettings={storeSettings}
-        onUpdateStoreSettings={setStoreSettings}
+        onUpdateStoreSettings={handleUpdateStoreSettings}
         onToggleSoldOut={handleToggleSoldOut}
         onAddProduct={handleAddProduct}
       />
