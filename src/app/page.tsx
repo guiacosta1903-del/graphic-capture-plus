@@ -24,40 +24,38 @@ export default function Home() {
     whatsappNumber: '5551999999999',
   });
 
-  // Carregar do localStorage ao iniciar
+  // Carregar do servidor (disco) ao iniciar
   React.useEffect(() => {
-    try {
-      const savedProducts = localStorage.getItem('gs_products');
-      if (savedProducts) setProducts(JSON.parse(savedProducts));
-
-      const savedSettings = localStorage.getItem('gs_settings');
-      if (savedSettings) setStoreSettings(JSON.parse(savedSettings));
-
-      const savedOrders = localStorage.getItem('gs_orders');
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
-    } catch (e) {
-      console.error('Erro ao ler localStorage', e);
-    }
+    fetch('/api/store')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.products && data.products.length > 0) setProducts(data.products);
+        if (data.settings && Object.keys(data.settings).length > 0) {
+          setStoreSettings((prev) => ({ ...prev, ...data.settings }));
+        }
+        if (data.orders) setOrders(data.orders);
+      })
+      .catch((err) => console.error('Erro ao carregar dados do disco (/api/store):', err));
   }, []);
 
-  // Salvar no localStorage sempre que houver alterações
+  // Salvar no servidor (disco) sempre que houver alterações
   const handleUpdateStoreSettings = (newSettings: typeof storeSettings) => {
     setStoreSettings(newSettings);
-    try {
-      localStorage.setItem('gs_settings', JSON.stringify(newSettings));
-    } catch (e) {
-      console.error('Erro ao salvar settings no localStorage', e);
-    }
+    fetch('/api/store', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings: newSettings }),
+    }).catch((err) => console.error('Erro ao salvar settings no disco:', err));
   };
 
   const handleUpdateProducts = (updater: (prev: Product[]) => Product[]) => {
     setProducts((prev) => {
       const updated = updater(prev);
-      try {
-        localStorage.setItem('gs_products', JSON.stringify(updated));
-      } catch (e) {
-        console.error('Erro ao salvar produtos no localStorage', e);
-      }
+      fetch('/api/store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: updated }),
+      }).catch((err) => console.error('Erro ao salvar produtos no disco:', err));
       return updated;
     });
   };
@@ -112,11 +110,11 @@ export default function Home() {
   const handleOrderCompleted = (newOrder: OrderData) => {
     setOrders((prev) => {
       const updated = [newOrder, ...prev];
-      try {
-        localStorage.setItem('gs_orders', JSON.stringify(updated));
-      } catch (e) {
-        console.error('Erro ao salvar pedidos no localStorage', e);
-      }
+      fetch('/api/store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orders: updated }),
+      }).catch((err) => console.error('Erro ao salvar pedidos no disco:', err));
       return updated;
     });
     setCart([]); // Clear cart

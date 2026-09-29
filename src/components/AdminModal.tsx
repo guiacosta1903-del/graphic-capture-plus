@@ -45,34 +45,57 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [settingsData, setSettingsData] = useState<StoreSettings>(storeSettings);
   const [savedSettingsFeedback, setSavedSettingsFeedback] = useState(false);
 
-  // File upload reader for new product
-  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload state
+  const [isUploading, setIsUploading] = useState(false);
+
+  // File upload para foto do novo produto (salva arquivo físico no disco)
+  const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setPreviewImage(result);
-      setNewImageUrl(result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsUploading(true);
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.url) {
+        setPreviewImage(data.url);
+        setNewImageUrl(data.url);
+      }
+    } catch (err) {
+      console.error('Erro ao fazer upload da foto:', err);
+      alert('Erro ao enviar imagem.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  // File upload reader for settings (Logo, Banners)
-  const handleSettingsImageUpload = (
+  // File upload para configurações (Logo, Banners) direto para public/uploads
+  const handleSettingsImageUpload = async (
     key: 'logoUrl' | 'banner1Image' | 'banner2Image',
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setSettingsData((prev) => ({ ...prev, [key]: result }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsUploading(true);
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.url) {
+        const updated = { ...settingsData, [key]: data.url };
+        setSettingsData(updated);
+        onUpdateStoreSettings(updated); // Atualiza imediatamente no estado e no disco
+      }
+    } catch (err) {
+      console.error('Erro no upload:', err);
+      alert('Erro ao enviar imagem.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSaveSettings = (e: React.FormEvent) => {
