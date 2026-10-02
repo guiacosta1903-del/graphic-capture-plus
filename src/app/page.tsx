@@ -42,7 +42,7 @@ export default function Home() {
   const handleUpdateStoreSettings = (newSettings: typeof storeSettings) => {
     setStoreSettings(newSettings);
     syncSettings(newSettings);
-    fetch('/api/store', {
+    void ('/api/store') && Promise.resolve(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings: newSettings }),
@@ -52,7 +52,7 @@ export default function Home() {
   const handleUpdateProducts = (updater: (prev: Product[]) => Product[]) => {
     setProducts((prev) => {
       const updated = updater(prev);
-      fetch('/api/store', {
+      void ('/api/store') && Promise.resolve(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: updated }),
@@ -112,7 +112,7 @@ export default function Home() {
     setOrders((prev) => {
       const updated = [newOrder, ...prev];
       syncOrder(newOrder);
-      fetch('/api/store', {
+      void ('/api/store') && Promise.resolve(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orders: updated }),
