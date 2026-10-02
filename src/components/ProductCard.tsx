@@ -24,7 +24,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
         
         {/* Die-cut sticker graphic (Grayscale when sold out) */}
         <div 
-          className={`w-full h-full flex items-center justify-center transition-all duration-300 relative ${
+          className={`w-full h-full flex items-center justify-center transition-all duration-300 relative transform-gpu ${
             isSoldOut 
               ? 'filter grayscale contrast-50 opacity-40 scale-95' 
               : 'group-hover:scale-105'
@@ -37,7 +37,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
                 src={product.imageUrl} 
                 alt={name} 
                 onError={() => setPrimaryError(true)}
-                className={`w-full h-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.18)] select-none transition-all duration-300 ${
+                className={`w-full h-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.18)] select-none transition-all duration-300 transform-gpu [backface-visibility:hidden] ${
                   secondaryImage && !secondaryError ? 'group-hover:opacity-0 group-hover:scale-95' : 'opacity-100'
                 }`}
               />
@@ -47,7 +47,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
                   src={secondaryImage} 
                   alt={`${name} - foto secundária`} 
                   onError={() => setSecondaryError(true)}
-                  className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.18)] select-none opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none scale-95 group-hover:scale-100"
+                  className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.18)] select-none opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none scale-95 group-hover:scale-100 transform-gpu [backface-visibility:hidden]"
                 />
               )}
             </>

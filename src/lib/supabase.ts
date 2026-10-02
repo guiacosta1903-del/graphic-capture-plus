@@ -24,13 +24,10 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 export const supabase = clientSupabase || (isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey) : null);
 
 /**
- * Comprime a imagem no navegador usando Canvas para garantir que:
- * 1. Pese menos de 80 KB (em vez de 5 MB de foto pesada)
- * 2. Carregue instantaneamente em qualquer tela e nunca falhe
- * 3. Não exceda a quota do localStorage
- * 4. Fique salva permanentemente no banco
+ * Converte a imagem com máxima fidelidade e nitidez (anti-aliasing bicúbico de alta precisão)
+ * sem pixelização, preservando até 2400px e cores vibrantes.
  */
-export async function compressImage(file: File, maxDim = 800, quality = 0.85): Promise<string> {
+export async function optimizeImage(file: File, maxDim = 2400, quality = 0.95): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -41,34 +38,48 @@ export async function compressImage(file: File, maxDim = 800, quality = 0.85): P
       }
       const img = new Image();
       img.onload = () => {
-        let width = img.width;
-        let height = img.height;
+        const width = img.naturalWidth || img.width;
+        const height = img.naturalHeight || img.height;
 
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
+        // Se o arquivo já estiver dentro do limite razoável (<= 2400px),
+        // preserva o arquivo original intacto sem recomprimir!
+        if (width <= maxDim && height <= maxDim) {
+          resolve(src);
+          return;
+        }
+
+        let targetWidth = width;
+        let targetHeight = height;
+        if (width > height) {
+          targetHeight = Math.round((height * maxDim) / width);
+          targetWidth = maxDim;
+        } else {
+          targetWidth = Math.round((width * maxDim) / height);
+          targetHeight = maxDim;
         }
 
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           resolve(src);
           return;
         }
 
-        const isPng = file.type === 'image/png';
-        ctx.drawImage(img, 0, 0, width, height);
+        // Habilita suavização de máxima precisão no motor gráfico
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
 
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        const isPng = file.type === 'image/png';
         try {
-          const compressed = canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', quality);
-          resolve(compressed);
+          // PNG mantém transparência sem perdas; JPEG usa 95% para nitidez total
+          const output = isPng 
+            ? canvas.toDataURL('image/png') 
+            : canvas.toDataURL('image/jpeg', quality);
+          resolve(output);
         } catch {
           resolve(src);
         }
@@ -80,6 +91,9 @@ export async function compressImage(file: File, maxDim = 800, quality = 0.85): P
     reader.readAsDataURL(file);
   });
 }
+
+// Mantém retrocompatibilidade de export
+export const compressImage = optimizeImage;
 
 /**
  * Testa se uma URL de imagem é realmente renderizável pelo navegador
@@ -110,29 +124,25 @@ function testImageLoad(url: string, timeoutMs = 2500): Promise<boolean> {
 }
 
 /**
- * Upload de imagem ultra-resiliente:
- * Garante que a foto NUNCA fique em branco e SEMPRE apareça na tela.
- * Suporta buckets públicos, privados (com link assinado de 10 anos) e fallback comprimido.
+ * Upload de imagem com 100% de qualidade e resolução original:
+ * 1. Envia o arquivo ORIGINAL diretamente para o Supabase Storage (sem redução ou pixelização).
+ * 2. Valida se a URL pública ou assinada de 10 anos está acessível no navegador.
+ * 3. Se a nuvem estiver inacessível, gera fallback de ultra-alta resolução (2400px com suavização bicúbica).
  */
 export async function uploadImage(file: File): Promise<string> {
-  // 1. Gera imediatamente a versão comprimida e otimizada (sempre funciona e pesa ~50KB)
-  const compressed = await compressImage(file, 800, 0.85);
-
-  // 2. Tenta fazer upload no Supabase Storage se o storage estiver configurado
-  if (supabase && compressed) {
+  // 1. Tenta PRIMEIRO o upload direto do arquivo ORIGINAL sem compressão no Supabase Storage
+  if (supabase) {
     try {
-      const ext = file.name.split('.').pop() || 'png';
+      const ext = file.name.split('.').pop() || (file.type === 'image/png' ? 'png' : 'jpg');
       const cleanName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
       const filePath = `uploads/${cleanName}`;
 
-      const res = await fetch(compressed);
-      const blob = await res.blob();
-
+      // Envia o arquivo original (100% da resolução e nitidez nativa)
       const { data, error } = await supabase.storage
         .from('store-assets')
-        .upload(filePath, blob, {
+        .upload(filePath, file, {
           contentType: file.type || 'image/png',
-          cacheControl: '3600',
+          cacheControl: '31536000',
           upsert: true,
         });
 
@@ -149,7 +159,7 @@ export async function uploadImage(file: File): Promise<string> {
           }
         }
 
-        // Se o bucket for restrito/privado (como em certos planos da nuvem), gera link assinado de longa duração
+        // Se o bucket for restrito/privado, gera link assinado de longa duração (10 anos)
         try {
           const { data: signedData } = await supabase.storage
             .from('store-assets')
@@ -164,12 +174,13 @@ export async function uploadImage(file: File): Promise<string> {
         } catch {}
       }
     } catch (err) {
-      console.warn('Supabase Storage inacessível, utilizando imagem compactada:', err);
+      console.warn('Erro ao enviar imagem original para o Supabase Storage:', err);
     }
   }
 
-  // 3. Fallback infalível que sempre aparece e nunca quebra
-  return compressed;
+  // 2. Fallback de alta resolução: preserva até 2400px com anti-aliasing bicúbico
+  const highResFallback = await optimizeImage(file, 2400, 0.95);
+  return highResFallback;
 }
 
 /**
