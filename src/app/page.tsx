@@ -42,21 +42,11 @@ export default function Home() {
   const handleUpdateStoreSettings = (newSettings: typeof storeSettings) => {
     setStoreSettings(newSettings);
     syncSettings(newSettings);
-    fetch('/api/store', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings: newSettings }),
-    }).catch((err) => console.error('Erro ao salvar settings localmente:', err));
   };
 
   const handleUpdateProducts = (updater: (prev: Product[]) => Product[]) => {
     setProducts((prev) => {
       const updated = updater(prev);
-      fetch('/api/store', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ products: updated }),
-      }).catch((err) => console.error('Erro ao salvar produtos localmente:', err));
       return updated;
     });
   };
@@ -112,11 +102,6 @@ export default function Home() {
     setOrders((prev) => {
       const updated = [newOrder, ...prev];
       syncOrder(newOrder);
-      fetch('/api/store', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orders: updated }),
-      }).catch((err) => console.error('Erro ao salvar pedidos localmente:', err));
       return updated;
     });
     setCart([]); // Clear cart

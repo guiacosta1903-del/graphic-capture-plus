@@ -40,23 +40,18 @@ export async function uploadImage(file: File): Promise<string> {
       if (error) {
         console.warn('Erro ao subir para Supabase Storage, usando API local:', error);
       } else if (data) {
-        const { data: publicUrlData } = supabase.storage
+        // Bucket privado: gera link assinado de longa duração (10 anos)
+        const { data: signed, error: signErr } = await supabase.storage
           .from('store-assets')
-          .getPublicUrl(filePath);
-
-        return publicUrlData.publicUrl;
+          .createSignedUrl(filePath, 60 * 60 * 24 * 365 * 10);
+        if (signErr || !signed) throw signErr || new Error('Falha ao gerar link');
+        return signed.signedUrl;
       }
     } catch (err) {
       console.warn('Erro na chamada Supabase Storage:', err);
     }
   }
 
-  // Fallback para rota local /api/upload
-  const formData = new FormData();
-  formData.append('file', file);
-  const res = await fetch('/api/upload', { method: 'POST', body: formData });
-  const data = await res.json();
-  if (data.url) return data.url;
   throw new Error('Falha no upload do arquivo');
 }
 
@@ -102,9 +97,7 @@ export async function fetchStoreData() {
     }
   }
 
-  // Fallback local via /api/store
-  const res = await fetch('/api/store');
-  return await res.json();
+  return { products: INITIAL_PRODUCTS, settings: null, orders: [] as OrderData[] };
 }
 
 /**
