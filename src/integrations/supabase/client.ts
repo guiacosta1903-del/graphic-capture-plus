@@ -3,22 +3,21 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { brokeredPreviewStorage } from './previewAuthStorage';
 
-const getEnv = (key: string): string => {
-  try {
-    if (typeof process !== 'undefined' && process.env?.[key]) {
-      return process.env[key] as string;
-    }
-  } catch {}
-  try {
-    if (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.[key]) {
-      return (import.meta as any).env[key] as string;
-    }
-  } catch {}
-  return '';
-};
+const SUPABASE_URL = 
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  (typeof window !== 'undefined' && ((window as any).__ENV__?.VITE_SUPABASE_URL || (window as any).VITE_SUPABASE_URL)) ||
+  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_SUPABASE_URL) ||
+  'https://npvhpouftbqrfrlrithb.supabase.co';
 
-const SUPABASE_URL = (getEnv('NEXT_PUBLIC_SUPABASE_URL') || getEnv('VITE_SUPABASE_URL')) as string;
-const SUPABASE_PUBLISHABLE_KEY = (getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY') || getEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY') || getEnv('VITE_SUPABASE_PUBLISHABLE_KEY') || getEnv('VITE_SUPABASE_ANON_KEY')) as string;
+const SUPABASE_PUBLISHABLE_KEY = 
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  (typeof window !== 'undefined' && ((window as any).__ENV__?.VITE_SUPABASE_PUBLISHABLE_KEY || (window as any).VITE_SUPABASE_PUBLISHABLE_KEY)) ||
+  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_SUPABASE_PUBLISHABLE_KEY) ||
+  '';
 
 
 function isNewSupabaseApiKey(value: string): boolean {

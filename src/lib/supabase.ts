@@ -3,31 +3,21 @@ import { createClient } from '@supabase/supabase-js';
 import { Product, OrderData } from '@/types';
 import { INITIAL_PRODUCTS } from '@/data/products';
 
-// Função para buscar variáveis de ambiente com suporte total tanto a Vite (Lovable) quanto a Next.js
-const getEnvVar = (key: string): string => {
-  try {
-    if (typeof import.meta !== 'undefined' && (import.meta as any).env?.[key]) {
-      return (import.meta as any).env[key];
-    }
-  } catch {}
+export const supabaseUrl = 
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  (typeof window !== 'undefined' && ((window as any).__ENV__?.VITE_SUPABASE_URL || (window as any).VITE_SUPABASE_URL)) ||
+  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_SUPABASE_URL) ||
+  'https://npvhpouftbqrfrlrithb.supabase.co';
 
-  try {
-    if (typeof process !== 'undefined' && process.env?.[key]) {
-      return process.env[key] || '';
-    }
-  } catch {}
-
-  return '';
-};
-
-const supabaseUrl = 
-  getEnvVar('VITE_SUPABASE_URL') || 
-  getEnvVar('NEXT_PUBLIC_SUPABASE_URL');
-
-const supabaseAnonKey = 
-  getEnvVar('VITE_SUPABASE_PUBLISHABLE_KEY') || 
-  getEnvVar('VITE_SUPABASE_ANON_KEY') || 
-  getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+export const supabaseAnonKey = 
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  (typeof window !== 'undefined' && ((window as any).__ENV__?.VITE_SUPABASE_PUBLISHABLE_KEY || (window as any).VITE_SUPABASE_PUBLISHABLE_KEY)) ||
+  (typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_SUPABASE_PUBLISHABLE_KEY) ||
+  '';
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 

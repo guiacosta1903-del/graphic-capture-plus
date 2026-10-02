@@ -61,6 +61,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // Settings form state
   const [settingsData, setSettingsData] = useState<StoreSettings>(storeSettings);
   const [savedSettingsFeedback, setSavedSettingsFeedback] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -127,6 +132,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     e.preventDefault();
     onUpdateStoreSettings(settingsData);
     setSavedSettingsFeedback(true);
+    showToast('✓ Configurações da loja salvas com sucesso!');
     setTimeout(() => setSavedSettingsFeedback(false), 3000);
   };
 
@@ -148,6 +154,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       isSoldOut: false,
     };
     onAddProduct(prod);
+    showToast(`✓ Adesivo "${prod.name}" cadastrado e salvo com sucesso!`);
 
     // Reset form
     setNewTitle('');
@@ -227,14 +234,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
     onUpdateProduct(updatedProduct);
     setEditingProduct(null);
+    showToast(`✓ Adesivo "${updatedProduct.name}" atualizado e salvo!`);
   };
 
   // Excluir produto atualmente em edição
   const handleDeleteCurrentEditing = () => {
     if (!editingProduct) return;
     if (window.confirm(`Tem certeza que deseja remover o adesivo "${editingProduct.name}"?`)) {
+      const name = editingProduct.name;
       onDeleteProduct(editingProduct.id);
       setEditingProduct(null);
+      showToast(`✓ Adesivo "${name}" removido do catálogo!`);
     }
   };
 
@@ -259,6 +269,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Toast Feedback Notification Banner */}
+        {toastMessage && (
+          <div className="bg-emerald-600 text-white text-xs font-bold py-2.5 px-4 flex items-center justify-center gap-2 shadow-inner animate-in fade-in slide-in-from-top-1 duration-200">
+            <Check className="w-4 h-4 text-white" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
 
         {/* Tab Navigation - Segmented Control sem barras de rolagem bugadas */}
         <div className="bg-zinc-100/90 border-b border-zinc-200 p-2 sm:p-2.5">

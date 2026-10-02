@@ -25,28 +25,79 @@ export default function Home() {
     whatsappNumber: '5551999999999',
   });
 
-  // Carregar dados (Supabase Cloud ou Servidor Local) ao iniciar
+  // Carregar dados (localStorage instantâneo + Supabase Cloud) ao iniciar
   React.useEffect(() => {
+    // 1. Restaurar instantaneamente do cache local persistente no navegador
+    try {
+      const cachedProds = localStorage.getItem('gremio_stickers_products');
+      if (cachedProds) {
+        const parsed = JSON.parse(cachedProds);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProducts(parsed);
+        }
+      }
+      const cachedSettings = localStorage.getItem('gremio_stickers_settings');
+      if (cachedSettings) {
+        const parsed = JSON.parse(cachedSettings);
+        if (parsed && typeof parsed === 'object') {
+          setStoreSettings((prev) => ({ ...prev, ...parsed }));
+        }
+      }
+      const cachedOrders = localStorage.getItem('gremio_stickers_orders');
+      if (cachedOrders) {
+        const parsed = JSON.parse(cachedOrders);
+        if (Array.isArray(parsed)) {
+          setOrders(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao restaurar do localStorage:', e);
+    }
+
+    // 2. Sincronizar com o banco Supabase na nuvem
     fetchStoreData()
       .then((data) => {
-        if (data.products && data.products.length > 0) setProducts(data.products);
+        if (data.products && data.products.length > 0) {
+          setProducts(data.products);
+          try {
+            localStorage.setItem('gremio_stickers_products', JSON.stringify(data.products));
+          } catch {}
+        }
         if (data.settings && Object.keys(data.settings).length > 0) {
           setStoreSettings((prev) => ({ ...prev, ...data.settings }));
+          try {
+            localStorage.setItem('gremio_stickers_settings', JSON.stringify(data.settings));
+          } catch {}
         }
-        if (data.orders) setOrders(data.orders);
+        if (data.orders && data.orders.length > 0) {
+          setOrders(data.orders);
+          try {
+            localStorage.setItem('gremio_stickers_orders', JSON.stringify(data.orders));
+          } catch {}
+        }
       })
-      .catch((err) => console.error('Erro ao carregar dados:', err));
+      .catch((err) => console.error('Erro ao carregar dados do Supabase:', err));
   }, []);
 
-  // Salvar configurações (Supabase e local)
+  // Salvar configurações (localStorage + Supabase)
   const handleUpdateStoreSettings = (newSettings: typeof storeSettings) => {
     setStoreSettings(newSettings);
+    try {
+      localStorage.setItem('gremio_stickers_settings', JSON.stringify(newSettings));
+    } catch (e) {
+      console.warn('Erro ao salvar settings no localStorage:', e);
+    }
     syncSettings(newSettings);
   };
 
   const handleUpdateProducts = (updater: (prev: Product[]) => Product[]) => {
     setProducts((prev) => {
       const updated = updater(prev);
+      try {
+        localStorage.setItem('gremio_stickers_products', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Erro ao salvar produtos no localStorage:', e);
+      }
       return updated;
     });
   };
