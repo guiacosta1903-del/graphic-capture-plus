@@ -10,7 +10,7 @@ import { CartDrawer } from '@/components/CartDrawer';
 import { CheckoutModal } from '@/components/CheckoutModal';
 import { AdminModal } from '@/components/AdminModal';
 import { MessageCircle, Truck, Zap, ShieldCheck, Sparkles } from 'lucide-react';
-import { fetchStoreData, syncProduct, syncSettings, syncOrder } from '@/lib/supabase';
+import { fetchStoreData, syncProduct, syncSettings, syncOrder, deleteStoreProduct } from '@/lib/supabase';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
@@ -124,6 +124,18 @@ export default function Home() {
   const handleAddProduct = (newProd: Product) => {
     syncProduct(newProd);
     handleUpdateProducts((prev) => [newProd, ...prev]);
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    deleteStoreProduct(productId);
+    handleUpdateProducts((prev) => prev.filter((p) => p.id !== productId));
+  };
+
+  const handleUpdateProduct = (updatedProduct: Product) => {
+    syncProduct(updatedProduct);
+    handleUpdateProducts((prev) =>
+      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+    );
   };
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -279,6 +291,8 @@ export default function Home() {
         onUpdateStoreSettings={handleUpdateStoreSettings}
         onToggleSoldOut={handleToggleSoldOut}
         onAddProduct={handleAddProduct}
+        onDeleteProduct={handleDeleteProduct}
+        onUpdateProduct={handleUpdateProduct}
       />
     </div>
   );

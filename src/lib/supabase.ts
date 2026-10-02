@@ -166,6 +166,19 @@ export async function syncProduct(product: Product) {
 }
 
 /**
+ * Deleta produto do Supabase
+ */
+export async function deleteStoreProduct(productId: string) {
+  if (supabase) {
+    try {
+      await (supabase as any).from('products').delete().eq('id', productId);
+    } catch (err) {
+      console.error('Erro ao excluir produto no Supabase:', err);
+    }
+  }
+}
+
+/**
  * Salva configurações da loja no Supabase
  */
 export async function syncSettings(settings: {

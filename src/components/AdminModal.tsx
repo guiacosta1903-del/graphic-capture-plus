@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Product, OrderData } from '@/types';
-import { X, Plus, ToggleLeft, ToggleRight, Upload, Image as ImageIcon, Settings, ShoppingBag, Check } from 'lucide-react';
+import { X, Plus, ToggleLeft, ToggleRight, Upload, Image as ImageIcon, Settings, ShoppingBag, Check, Trash2, MoreHorizontal, ArrowLeft, Edit3 } from 'lucide-react';
 import { uploadImage } from '@/lib/supabase';
 
 interface StoreSettings {
@@ -21,6 +21,8 @@ interface AdminModalProps {
   onUpdateStoreSettings: (newSettings: StoreSettings) => void;
   onToggleSoldOut: (productId: string) => void;
   onAddProduct: (newProduct: Product) => void;
+  onDeleteProduct: (productId: string) => void;
+  onUpdateProduct: (product: Product) => void;
 }
 
 export const AdminModal: React.FC<AdminModalProps> = ({
@@ -32,6 +34,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onUpdateStoreSettings,
   onToggleSoldOut,
   onAddProduct,
+  onDeleteProduct,
+  onUpdateProduct,
 }) => {
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'add' | 'settings'>('products');
 
@@ -41,6 +45,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newPromo, setNewPromo] = useState('LEVE 3 POR R$ 20 NO PIX');
   const [newImageUrl, setNewImageUrl] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // Edit product state
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editPixPrice, setEditPixPrice] = useState('');
+  const [editPromoTag, setEditPromoTag] = useState('');
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [editIsSoldOut, setEditIsSoldOut] = useState(false);
 
   // Settings form state
   const [settingsData, setSettingsData] = useState<StoreSettings>(storeSettings);
@@ -119,6 +132,65 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setActiveTab('products');
   };
 
+  // Iniciar edição de detalhes de um adesivo
+  const handleStartEdit = (product: Product) => {
+    setEditingProduct(product);
+    setEditName(product.name);
+    setEditPrice(product.price.toString());
+    setEditPixPrice(product.pixPrice.toString());
+    setEditPromoTag(product.promoTag || '');
+    setEditImageUrl(product.imageUrl || '');
+    setEditIsSoldOut(product.isSoldOut || false);
+  };
+
+  // Upload de foto na edição de adesivo
+  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const url = await uploadImage(file);
+      setEditImageUrl(url);
+    } catch (err) {
+      console.error('Erro ao fazer upload da foto:', err);
+      alert('Erro ao enviar imagem.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Salvar alterações da edição detalhada
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    const priceNum = parseFloat(editPrice) || editingProduct.price;
+    const pixNum = parseFloat(editPixPrice) || (priceNum * 0.9);
+
+    const updatedProduct: Product = {
+      ...editingProduct,
+      name: editName.trim() || editingProduct.name,
+      price: priceNum,
+      pixPrice: pixNum,
+      promoTag: editPromoTag.trim(),
+      imageUrl: editImageUrl || editingProduct.imageUrl,
+      isSoldOut: editIsSoldOut,
+    };
+
+    onUpdateProduct(updatedProduct);
+    setEditingProduct(null);
+  };
+
+  // Excluir produto atualmente em edição
+  const handleDeleteCurrentEditing = () => {
+    if (!editingProduct) return;
+    if (window.confirm(`Tem certeza que deseja remover o adesivo "${editingProduct.name}"?`)) {
+      onDeleteProduct(editingProduct.id);
+      setEditingProduct(null);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -146,7 +218,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
             <button
               type="button"
-              onClick={() => setActiveTab('products')}
+              onClick={() => {
+                setEditingProduct(null);
+                setActiveTab('products');
+              }}
               className={`py-2 px-2 text-xs sm:text-sm font-bold rounded-xl transition text-center flex items-center justify-center gap-1.5 ${
                 activeTab === 'products'
                   ? 'bg-white text-sky-600 shadow-sm border border-zinc-200'
@@ -157,7 +232,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('add')}
+              onClick={() => {
+                setEditingProduct(null);
+                setActiveTab('add');
+              }}
               className={`py-2 px-2 text-xs sm:text-sm font-bold rounded-xl transition text-center flex items-center justify-center gap-1.5 ${
                 activeTab === 'add'
                   ? 'bg-white text-sky-600 shadow-sm border border-zinc-200'
@@ -168,7 +246,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('settings')}
+              onClick={() => {
+                setEditingProduct(null);
+                setActiveTab('settings');
+              }}
               className={`py-2 px-2 text-xs sm:text-sm font-bold rounded-xl transition text-center flex items-center justify-center gap-1.5 ${
                 activeTab === 'settings'
                   ? 'bg-white text-sky-600 shadow-sm border border-zinc-200'
@@ -180,7 +261,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('orders')}
+              onClick={() => {
+                setEditingProduct(null);
+                setActiveTab('orders');
+              }}
               className={`py-2 px-2 text-xs sm:text-sm font-bold rounded-xl transition text-center flex items-center justify-center gap-1.5 ${
                 activeTab === 'orders'
                   ? 'bg-white text-sky-600 shadow-sm border border-zinc-200'
@@ -193,65 +277,278 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           </div>
         </div>
 
-        {/* TAB 1: GERENCIAR ESTOQUE (TOGGLE ESGOTADO) */}
+        {/* TAB 1: GERENCIAR ESTOQUE (LISTA OU EDIÇÃO DETALHADA) */}
         {activeTab === 'products' && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
-            <p className="text-xs text-zinc-500 mb-2">
-              Clique no botão para alternar instantaneamente entre <strong>Em Estoque</strong> e <strong>Esgotado</strong> (com a foto cinza e faixa transversal).
-            </p>
-
-            <div className="divide-y divide-zinc-100">
-              {products.map((product) => (
-                <div 
-                  key={product.id}
-                  className="py-3 flex items-center justify-between gap-3 hover:bg-zinc-50 px-2 rounded-xl transition"
+          editingProduct ? (
+            /* DETALHES / EDITAR ADESIVO */
+            <form onSubmit={handleSaveEdit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-600 hover:text-zinc-950 transition"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {product.imageUrl ? (
-                      <img 
-                        src={product.imageUrl} 
-                        alt={product.name} 
-                        className="w-10 h-10 object-contain rounded-lg border border-zinc-200 bg-white p-0.5 flex-shrink-0"
-                      />
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Voltar para o Estoque</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-sky-600 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-200">
+                    Editar Detalhes
+                  </span>
+                </div>
+              </div>
+
+              {/* Foto do Adesivo */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-zinc-700">Foto do Adesivo</label>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-zinc-300 flex items-center justify-center bg-zinc-50 overflow-hidden flex-shrink-0">
+                    {editImageUrl ? (
+                      <img src={editImageUrl} alt="Preview" className="w-full h-full object-contain p-1" />
                     ) : (
-                      <div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-black text-xs flex-shrink-0">
-                        GS
-                      </div>
+                      <ImageIcon className="w-8 h-8 text-zinc-300" />
                     )}
-                    <div className="min-w-0">
-                      <h5 className="font-bold text-sm text-zinc-900 truncate">
-                        {product.name}
-                      </h5>
-                      <div className="text-xs text-zinc-400">
-                        R$ {product.price.toFixed(2).replace('.', ',')} • R$ {product.pixPrice.toFixed(2).replace('.', ',')} no Pix
-                      </div>
-                    </div>
                   </div>
 
+                  <div className="flex-1 space-y-1.5">
+                    <label className="cursor-pointer inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{isUploading ? 'Enviando foto...' : 'Escolher nova foto'}</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        disabled={isUploading}
+                        onChange={handleEditImageUpload} 
+                      />
+                    </label>
+                    <p className="text-[11px] text-zinc-400">
+                      Envie uma imagem recortada (.png ou .jpg) ou cole a URL abaixo.
+                    </p>
+                  </div>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="URL direta da foto (ex: https://... ou /products/foto.png)"
+                  value={editImageUrl}
+                  onChange={(e) => setEditImageUrl(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
+                />
+              </div>
+
+              {/* Nome do Modelo */}
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 mb-1">Nome do Modelo / Adesivo *</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
+                />
+              </div>
+
+              {/* Preços */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 mb-1">Preço Normal (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editPrice}
+                    onChange={(e) => {
+                      setEditPrice(e.target.value);
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        setEditPixPrice((val * 0.9).toFixed(2));
+                      }
+                    }}
+                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 mb-1">Preço no Pix (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editPixPrice}
+                    onChange={(e) => setEditPixPrice(e.target.value)}
+                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Tag Promocional */}
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 mb-1">Tag Promocional (Opcional)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: LEVE 3 POR R$ 20 NO PIX"
+                  value={editPromoTag}
+                  onChange={(e) => setEditPromoTag(e.target.value)}
+                  className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
+                />
+              </div>
+
+              {/* Status de Estoque */}
+              <div className="pt-2">
+                <label className="block text-xs font-bold text-zinc-700 mb-1.5">Status do Estoque</label>
+                <button
+                  type="button"
+                  onClick={() => setEditIsSoldOut(!editIsSoldOut)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition border ${
+                    editIsSoldOut
+                      ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                  }`}
+                >
+                  {editIsSoldOut ? (
+                    <>
+                      <ToggleLeft className="w-5 h-5 text-red-500" />
+                      <span>Esgotado (Adesivo fica cinza com faixa diagonal "ESGOTADO" e botão desativado)</span>
+                    </>
+                  ) : (
+                    <>
+                      <ToggleRight className="w-5 h-5 text-emerald-600" />
+                      <span>Em Estoque (Adesivo disponível para compra no catálogo)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Ações de Salvar e Excluir */}
+              <div className="pt-4 border-t border-zinc-200 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleDeleteCurrentEditing}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-3.5 py-2.5 rounded-xl border border-red-200 transition"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Excluir este Adesivo</span>
+                </button>
+
+                <div className="w-full sm:w-auto flex items-center gap-2">
                   <button
-                    onClick={() => onToggleSoldOut(product.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition flex-shrink-0 ${
-                      product.isSoldOut
-                        ? 'bg-red-50 text-red-600 border border-red-200'
-                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    }`}
+                    type="button"
+                    onClick={() => setEditingProduct(null)}
+                    className="flex-1 sm:flex-none text-xs font-bold text-zinc-600 hover:text-zinc-900 px-4 py-2.5 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition text-center"
                   >
-                    {product.isSoldOut ? (
-                      <>
-                        <ToggleLeft className="w-4 h-4 text-red-500" />
-                        <span>Esgotado</span>
-                      </>
-                    ) : (
-                      <>
-                        <ToggleRight className="w-4 h-4 text-emerald-600" />
-                        <span>Em Estoque</span>
-                      </>
-                    )}
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 px-5 py-2.5 rounded-xl shadow transition"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Salvar Alterações</span>
                   </button>
                 </div>
-              ))}
+              </div>
+            </form>
+          ) : (
+            /* LISTA DE PRODUTOS NO ESTOQUE */
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-zinc-500">
+                  Alterne o estoque, clique em <strong>... Detalhes</strong> para editar ou no botão vermelho para remover.
+                </p>
+                <span className="text-[11px] font-bold text-zinc-500 bg-zinc-100 px-2.5 py-0.5 rounded-full">
+                  {products.length} adesivos
+                </span>
+              </div>
+
+              <div className="divide-y divide-zinc-100">
+                {products.map((product) => (
+                  <div 
+                    key={product.id}
+                    className="py-3 flex items-center justify-between gap-3 hover:bg-zinc-50 px-2 rounded-xl transition"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {product.imageUrl ? (
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name} 
+                          className="w-11 h-11 object-contain rounded-lg border border-zinc-200 bg-white p-0.5 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-black text-xs flex-shrink-0">
+                          GS
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <h5 className="font-bold text-sm text-zinc-900 truncate">
+                          {product.name}
+                        </h5>
+                        <div className="text-xs text-zinc-500 flex items-center gap-1.5 flex-wrap">
+                          <span>R$ {product.price.toFixed(2).replace('.', ',')}</span>
+                          <span className="text-emerald-600 font-semibold">• R$ {product.pixPrice.toFixed(2).replace('.', ',')} Pix</span>
+                          {product.promoTag && (
+                            <span className="bg-sky-50 text-sky-700 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                              {product.promoTag}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                      {/* Toggle de Estoque */}
+                      <button
+                        type="button"
+                        onClick={() => onToggleSoldOut(product.id)}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-bold text-xs transition ${
+                          product.isSoldOut
+                            ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                        }`}
+                        title={product.isSoldOut ? 'Marcar como Em Estoque' : 'Marcar como Esgotado'}
+                      >
+                        {product.isSoldOut ? (
+                          <>
+                            <ToggleLeft className="w-4 h-4 text-red-500" />
+                            <span className="hidden sm:inline">Esgotado</span>
+                          </>
+                        ) : (
+                          <>
+                            <ToggleRight className="w-4 h-4 text-emerald-600" />
+                            <span className="hidden sm:inline">Em Estoque</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Botão ... Detalhes */}
+                      <button
+                        type="button"
+                        onClick={() => handleStartEdit(product)}
+                        className="px-2.5 py-1.5 rounded-xl text-zinc-700 hover:text-sky-600 hover:bg-sky-50 border border-zinc-200 transition flex items-center gap-1 font-bold text-xs"
+                        title="Ver e inserir detalhes do adesivo"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                        <span className="hidden sm:inline">Detalhes</span>
+                      </button>
+
+                      {/* Botão Remover */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Tem certeza que deseja remover o adesivo "${product.name}" do catálogo?`)) {
+                            onDeleteProduct(product.id);
+                          }
+                        }}
+                        className="p-1.5 sm:p-2 rounded-xl text-zinc-400 hover:text-red-600 hover:bg-red-50 border border-zinc-200 transition"
+                        title="Remover adesivo do catálogo"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )
         )}
 
         {/* TAB 2: ADICIONAR NOVO ADESIVO COM FOTO */}
