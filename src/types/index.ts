@@ -6,6 +6,8 @@ export interface Product {
   pixPrice: number;
   promoTag?: string;
   imageUrl: string;
+  secondaryImageUrl?: string;
+  images?: string[];
   isSoldOut: boolean;
   isFeatured?: boolean;
   category?: string;

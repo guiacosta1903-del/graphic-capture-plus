@@ -111,16 +111,33 @@ export async function fetchStoreData() {
       ]);
 
       const products: Product[] = productsRes.data && productsRes.data.length > 0
-        ? productsRes.data.map((p: any) => ({
-            id: String(p.id),
-            name: p.name,
-            price: Number(p.price),
-            pixPrice: Number(p.pix_price),
-            promoTag: p.promo_tag || '',
-            imageUrl: p.image_url || '',
-            isSoldOut: Boolean(p.is_sold_out),
-            isFeatured: Boolean(p.is_featured),
-          }))
+        ? productsRes.data.map((p: any) => {
+            let primaryUrl = p.image_url || '';
+            let secondaryUrl = p.secondary_image_url || '';
+
+            if (primaryUrl.includes('---SECONDARY---')) {
+              const parts = primaryUrl.split('---SECONDARY---');
+              primaryUrl = parts[0]?.trim() || '';
+              secondaryUrl = parts[1]?.trim() || '';
+            } else if (!secondaryUrl && Array.isArray(p.images) && p.images.length > 1) {
+              secondaryUrl = p.images[1] || '';
+            }
+
+            const imagesList = [primaryUrl, secondaryUrl].filter(Boolean);
+
+            return {
+              id: String(p.id),
+              name: p.name,
+              price: Number(p.price),
+              pixPrice: Number(p.pix_price),
+              promoTag: p.promo_tag || '',
+              imageUrl: primaryUrl,
+              secondaryImageUrl: secondaryUrl || undefined,
+              images: imagesList.length > 0 ? imagesList : undefined,
+              isSoldOut: Boolean(p.is_sold_out),
+              isFeatured: Boolean(p.is_featured),
+            };
+          })
         : INITIAL_PRODUCTS;
 
       const settings = settingsRes.data ? {
@@ -144,21 +161,41 @@ export async function fetchStoreData() {
 }
 
 /**
- * Salva produto no Supabase
+ * Salva produto no Supabase (com suporte a imagem secundária / hover)
  */
 export async function syncProduct(product: Product) {
   if (supabase) {
     try {
-      await (supabase as any).from('products').upsert({
+      const combinedImageUrl = product.secondaryImageUrl
+        ? `${product.imageUrl}\n---SECONDARY---\n${product.secondaryImageUrl}`
+        : product.imageUrl;
+
+      // 1. Tenta salvar incluindo secondary_image_url
+      const { error } = await (supabase as any).from('products').upsert({
         id: product.id,
         name: product.name,
         price: product.price,
         pix_price: product.pixPrice,
         promo_tag: product.promoTag,
-        image_url: product.imageUrl,
+        image_url: combinedImageUrl,
+        secondary_image_url: product.secondaryImageUrl || null,
         is_sold_out: product.isSoldOut,
         is_featured: product.isFeatured || false,
       });
+
+      // Se a coluna secondary_image_url não existir no schema (erro 42703), salva no formato com delimiter em image_url
+      if (error && (error.code === '42703' || error.message?.includes('secondary_image_url'))) {
+        await (supabase as any).from('products').upsert({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          pix_price: product.pixPrice,
+          promo_tag: product.promoTag,
+          image_url: combinedImageUrl,
+          is_sold_out: product.isSoldOut,
+          is_featured: product.isFeatured || false,
+        });
+      }
     } catch (err) {
       console.error('Erro ao sincronizar produto no Supabase:', err);
     }

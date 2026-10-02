@@ -44,7 +44,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [newPrice, setNewPrice] = useState('8.00');
   const [newPromo, setNewPromo] = useState('LEVE 3 POR R$ 20 NO PIX');
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [newSecondaryImageUrl, setNewSecondaryImageUrl] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewSecondaryImage, setPreviewSecondaryImage] = useState<string | null>(null);
 
   // Edit product state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -53,6 +55,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [editPixPrice, setEditPixPrice] = useState('');
   const [editPromoTag, setEditPromoTag] = useState('');
   const [editImageUrl, setEditImageUrl] = useState('');
+  const [editSecondaryImageUrl, setEditSecondaryImageUrl] = useState('');
   const [editIsSoldOut, setEditIsSoldOut] = useState(false);
 
   // Settings form state
@@ -62,7 +65,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
 
-  // File upload para foto do novo produto (Supabase Storage com fallback local)
+  // File upload para foto principal do novo produto (Supabase Storage com fallback local)
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -75,6 +78,24 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     } catch (err) {
       console.error('Erro ao fazer upload da foto:', err);
       alert('Erro ao enviar imagem.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // File upload para foto secundária (hover) do novo produto
+  const handleProductSecondaryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const url = await uploadImage(file);
+      setPreviewSecondaryImage(url);
+      setNewSecondaryImageUrl(url);
+    } catch (err) {
+      console.error('Erro ao fazer upload da foto secundária:', err);
+      alert('Erro ao enviar imagem secundária.');
     } finally {
       setIsUploading(false);
     }
@@ -114,6 +135,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (!newTitle) return;
 
     const priceNum = parseFloat(newPrice) || 8.00;
+    const imagesList = [newImageUrl, newSecondaryImageUrl].filter(Boolean);
     const prod: Product = {
       id: String(Date.now()),
       name: newTitle,
@@ -121,6 +143,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       pixPrice: priceNum * 0.9,
       promoTag: newPromo,
       imageUrl: newImageUrl || '',
+      secondaryImageUrl: newSecondaryImageUrl.trim() || undefined,
+      images: imagesList.length > 0 ? imagesList : undefined,
       isSoldOut: false,
     };
     onAddProduct(prod);
@@ -128,7 +152,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     // Reset form
     setNewTitle('');
     setNewImageUrl('');
+    setNewSecondaryImageUrl('');
     setPreviewImage(null);
+    setPreviewSecondaryImage(null);
     setActiveTab('products');
   };
 
@@ -140,10 +166,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setEditPixPrice(product.pixPrice.toString());
     setEditPromoTag(product.promoTag || '');
     setEditImageUrl(product.imageUrl || '');
+    setEditSecondaryImageUrl(product.secondaryImageUrl || (product.images && product.images.length > 1 ? product.images[1] : '') || '');
     setEditIsSoldOut(product.isSoldOut || false);
   };
 
-  // Upload de foto na edição de adesivo
+  // Upload de foto principal na edição de adesivo
   const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -160,6 +187,23 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
+  // Upload de foto secundária (hover) na edição de adesivo
+  const handleEditSecondaryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const url = await uploadImage(file);
+      setEditSecondaryImageUrl(url);
+    } catch (err) {
+      console.error('Erro ao fazer upload da foto secundária:', err);
+      alert('Erro ao enviar imagem secundária.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Salvar alterações da edição detalhada
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,6 +211,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
     const priceNum = parseFloat(editPrice) || editingProduct.price;
     const pixNum = parseFloat(editPixPrice) || (priceNum * 0.9);
+    const imagesList = [editImageUrl, editSecondaryImageUrl].filter(Boolean);
 
     const updatedProduct: Product = {
       ...editingProduct,
@@ -175,6 +220,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       pixPrice: pixNum,
       promoTag: editPromoTag.trim(),
       imageUrl: editImageUrl || editingProduct.imageUrl,
+      secondaryImageUrl: editSecondaryImageUrl.trim() || undefined,
+      images: imagesList.length > 0 ? imagesList : undefined,
       isSoldOut: editIsSoldOut,
     };
 
@@ -298,22 +345,25 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
               </div>
 
-              {/* Foto do Adesivo */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-zinc-700">Foto do Adesivo</label>
+              {/* Foto Principal */}
+              <div className="space-y-2 p-3 bg-zinc-50 rounded-2xl border border-zinc-200">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-zinc-800">1. Foto Principal (Capa)</label>
+                  <span className="text-[10px] text-zinc-400 font-semibold">Exibição padrão</span>
+                </div>
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-zinc-300 flex items-center justify-center bg-zinc-50 overflow-hidden flex-shrink-0">
+                  <div className="w-16 h-16 rounded-xl border border-zinc-200 flex items-center justify-center bg-white overflow-hidden flex-shrink-0">
                     {editImageUrl ? (
-                      <img src={editImageUrl} alt="Preview" className="w-full h-full object-contain p-1" />
+                      <img src={editImageUrl} alt="Preview Principal" className="w-full h-full object-contain p-1" />
                     ) : (
-                      <ImageIcon className="w-8 h-8 text-zinc-300" />
+                      <ImageIcon className="w-6 h-6 text-zinc-300" />
                     )}
                   </div>
 
-                  <div className="flex-1 space-y-1.5">
-                    <label className="cursor-pointer inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition">
+                  <div className="flex-1 space-y-1">
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold py-2 px-3 rounded-xl transition">
                       <Upload className="w-3.5 h-3.5" />
-                      <span>{isUploading ? 'Enviando foto...' : 'Escolher nova foto'}</span>
+                      <span>{isUploading ? 'Enviando foto...' : 'Trocar foto principal'}</span>
                       <input 
                         type="file" 
                         accept="image/*" 
@@ -322,18 +372,68 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         onChange={handleEditImageUpload} 
                       />
                     </label>
-                    <p className="text-[11px] text-zinc-400">
-                      Envie uma imagem recortada (.png ou .jpg) ou cole a URL abaixo.
+                  </div>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Ou cole a URL direta (ex: https://... ou /products/foto.png)"
+                  value={editImageUrl}
+                  onChange={(e) => setEditImageUrl(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium bg-white"
+                />
+              </div>
+
+              {/* Foto Secundária (Hover) */}
+              <div className="space-y-2 p-3 bg-sky-50/60 rounded-2xl border border-sky-100">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-sky-950 flex items-center gap-1.5">
+                    <span>2. Foto Secundária (Muda ao passar o mouse)</span>
+                    <span className="text-[10px] text-sky-600 bg-sky-100 font-semibold px-1.5 py-0.5 rounded">Opcional</span>
+                  </label>
+                  {editSecondaryImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setEditSecondaryImageUrl('')}
+                      className="text-[11px] font-bold text-red-500 hover:text-red-700 transition"
+                    >
+                      Remover foto 2
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-xl border border-sky-200 flex items-center justify-center bg-white overflow-hidden flex-shrink-0">
+                    {editSecondaryImageUrl ? (
+                      <img src={editSecondaryImageUrl} alt="Preview Secundária" className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-sky-300" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-1">
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold py-2 px-3 rounded-xl transition">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{isUploading ? 'Enviando...' : editSecondaryImageUrl ? 'Trocar foto 2' : 'Adicionar foto 2'}</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        disabled={isUploading}
+                        onChange={handleEditSecondaryImageUpload} 
+                      />
+                    </label>
+                    <p className="text-[11px] text-sky-700/80">
+                      Ao passar o cursor do mouse no catálogo, a imagem mudará suavemente para esta foto!
                     </p>
                   </div>
                 </div>
 
                 <input
                   type="text"
-                  placeholder="URL direta da foto (ex: https://... ou /products/foto.png)"
-                  value={editImageUrl}
-                  onChange={(e) => setEditImageUrl(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
+                  placeholder="Ou cole a URL direta da foto 2 (ex: https://...)"
+                  value={editSecondaryImageUrl}
+                  onChange={(e) => setEditSecondaryImageUrl(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium bg-white"
                 />
               </div>
 
@@ -555,49 +655,110 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         {activeTab === 'add' && (
           <form onSubmit={handleCreateProduct} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
             
-            {/* Foto do Adesivo (Upload com Preview) */}
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-zinc-700">Foto do Adesivo (Fundo transparente ou claro)</label>
+            {/* Foto Principal */}
+            <div className="space-y-2 p-3 bg-zinc-50 rounded-2xl border border-zinc-200">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-zinc-800">1. Foto Principal (Capa do Adesivo) *</label>
+                <span className="text-[10px] text-zinc-400 font-semibold">Exibição padrão</span>
+              </div>
               
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-zinc-300 flex items-center justify-center bg-zinc-50 overflow-hidden flex-shrink-0">
+                <div className="w-16 h-16 rounded-xl border border-zinc-200 flex items-center justify-center bg-white overflow-hidden flex-shrink-0">
                   {previewImage ? (
                     <img src={previewImage} alt="Preview" className="w-full h-full object-contain p-1" />
                   ) : (
-                    <ImageIcon className="w-8 h-8 text-zinc-300" />
+                    <ImageIcon className="w-6 h-6 text-zinc-300" />
                   )}
                 </div>
 
-                <div className="flex-1 space-y-1.5">
-                  <label className="cursor-pointer inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition">
+                <div className="flex-1 space-y-1">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold py-2 px-3 rounded-xl transition">
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Escolher foto do computador</span>
+                    <span>{isUploading ? 'Enviando...' : 'Escolher foto do computador'}</span>
                     <input 
                       type="file" 
                       accept="image/*" 
                       className="hidden" 
+                      disabled={isUploading}
                       onChange={handleProductImageUpload} 
                     />
                   </label>
                   <p className="text-[11px] text-zinc-400">
-                    Dica: use fotos do adesivo com recorte (*die-cut*) em PNG ou JPEG.
+                    PNG ou JPEG do adesivo.
                   </p>
                 </div>
               </div>
 
-              {/* Opção de colar URL direta */}
-              <div className="pt-1">
-                <input
-                  type="text"
-                  placeholder="Ou cole a URL direta / caminho da foto (ex: /products/meu-adesivo.png)"
-                  value={newImageUrl}
-                  onChange={(e) => {
-                    setNewImageUrl(e.target.value);
-                    setPreviewImage(e.target.value);
-                  }}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
-                />
+              <input
+                type="text"
+                placeholder="Ou cole a URL direta / caminho (ex: /products/adesivo.png)"
+                value={newImageUrl}
+                onChange={(e) => {
+                  setNewImageUrl(e.target.value);
+                  setPreviewImage(e.target.value);
+                }}
+                className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium bg-white"
+              />
+            </div>
+
+            {/* Foto Secundária (Hover / Ao passar o mouse) */}
+            <div className="space-y-2 p-3 bg-sky-50/60 rounded-2xl border border-sky-100">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-sky-950 flex items-center gap-1.5">
+                  <span>2. Foto Secundária (Muda ao passar o mouse)</span>
+                  <span className="text-[10px] text-sky-600 bg-sky-100 font-semibold px-1.5 py-0.5 rounded">Opcional</span>
+                </label>
+                {newSecondaryImageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewSecondaryImageUrl('');
+                      setPreviewSecondaryImage(null);
+                    }}
+                    className="text-[11px] font-bold text-red-500 hover:text-red-700 transition"
+                  >
+                    Remover foto 2
+                  </button>
+                )}
               </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl border border-sky-200 flex items-center justify-center bg-white overflow-hidden flex-shrink-0">
+                  {previewSecondaryImage ? (
+                    <img src={previewSecondaryImage} alt="Preview Secundária" className="w-full h-full object-contain p-1" />
+                  ) : (
+                    <ImageIcon className="w-6 h-6 text-sky-300" />
+                  )}
+                </div>
+
+                <div className="flex-1 space-y-1">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold py-2 px-3 rounded-xl transition">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{isUploading ? 'Enviando...' : previewSecondaryImage ? 'Trocar foto 2' : 'Adicionar foto 2'}</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      disabled={isUploading}
+                      onChange={handleProductSecondaryImageUpload} 
+                    />
+                  </label>
+                  <p className="text-[11px] text-sky-700/80">
+                    Quando o cliente passar o mouse sobre este adesivo, a imagem mudará suavemente para esta foto!
+                  </p>
+                </div>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Ou cole a URL direta da foto 2 (ex: https://...)"
+                value={newSecondaryImageUrl}
+                onChange={(e) => {
+                  setNewSecondaryImageUrl(e.target.value);
+                  setPreviewSecondaryImage(e.target.value);
+                }}
+                className="w-full text-xs px-3 py-2 rounded-xl border border-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium bg-white"
+              />
             </div>
 
             {/* Nome do Modelo */}

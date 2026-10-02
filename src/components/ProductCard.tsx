@@ -12,31 +12,53 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const { isSoldOut, name, promoTag, price, pixPrice, id } = product;
+  const secondaryImage = product.secondaryImageUrl || (product.images && product.images.length > 1 ? product.images[1] : undefined);
 
   return (
     <div className="group relative flex flex-col justify-between bg-white rounded-2xl p-4 transition-all duration-200 border border-zinc-200/80 shadow-sm hover:shadow-md">
       
-      {/* 1. STICKER IMAGE CONTAINER */}
-      <div className="relative w-full aspect-square flex items-center justify-center p-3 mb-3 bg-zinc-50/50 rounded-xl overflow-hidden">
+      {/* 1. STICKER IMAGE CONTAINER (Sem caixa cinza e com imagem ampliada) */}
+      <div className="relative w-full aspect-square flex items-center justify-center p-0 mb-3 bg-white rounded-xl overflow-hidden">
         
         {/* Die-cut sticker graphic (Grayscale when sold out) */}
         <div 
-          className={`w-full h-full flex items-center justify-center transition-all duration-300 ${
+          className={`w-full h-full flex items-center justify-center transition-all duration-300 relative ${
             isSoldOut 
               ? 'filter grayscale contrast-50 opacity-40 scale-95' 
               : 'group-hover:scale-105'
           }`}
         >
           {product.imageUrl ? (
-            <img 
-              src={product.imageUrl} 
-              alt={name} 
-              className="w-full h-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.18)] select-none"
-            />
+            <>
+              {/* Foto Principal */}
+              <img 
+                src={product.imageUrl} 
+                alt={name} 
+                className={`w-full h-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.18)] select-none transition-all duration-300 ${
+                  secondaryImage ? 'group-hover:opacity-0 group-hover:scale-95' : 'opacity-100'
+                }`}
+              />
+              {/* Foto Secundária (Exibida no hover ao passar o mouse) */}
+              {secondaryImage && (
+                <img 
+                  src={secondaryImage} 
+                  alt={`${name} - foto secundária`} 
+                  className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.18)] select-none opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none scale-95 group-hover:scale-100"
+                />
+              )}
+            </>
           ) : (
             <StickerArt id={id} name={name} />
           )}
         </div>
+
+        {/* Indicador de 2 fotos */}
+        {secondaryImage && (
+          <div className="absolute top-2 left-2 z-10 bg-zinc-900/60 backdrop-blur-md text-[10px] text-white/90 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 pointer-events-none transition-opacity duration-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+            <span className="text-[9px] uppercase tracking-wider">2 Ângulos</span>
+          </div>
+        )}
 
         {/* TARJA LONGITUDINAL ATRAVESSADA "ESGOTADO" (Requisito explícito) */}
         {isSoldOut && (
