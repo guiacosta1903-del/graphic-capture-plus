@@ -10,6 +10,7 @@ import { CartDrawer } from '@/components/CartDrawer';
 import { CheckoutModal } from '@/components/CheckoutModal';
 import { AdminModal } from '@/components/AdminModal';
 import { MessageCircle, Truck, Zap, ShieldCheck, Sparkles } from 'lucide-react';
+import { fetchStoreData, syncProduct, syncSettings, syncOrder } from '@/lib/supabase';
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
@@ -24,10 +25,9 @@ export default function Home() {
     whatsappNumber: '5551999999999',
   });
 
-  // Carregar do servidor (disco) ao iniciar
+  // Carregar dados (Supabase Cloud ou Servidor Local) ao iniciar
   React.useEffect(() => {
-    fetch('/api/store')
-      .then((res) => res.json())
+    fetchStoreData()
       .then((data) => {
         if (data.products && data.products.length > 0) setProducts(data.products);
         if (data.settings && Object.keys(data.settings).length > 0) {
@@ -35,17 +35,18 @@ export default function Home() {
         }
         if (data.orders) setOrders(data.orders);
       })
-      .catch((err) => console.error('Erro ao carregar dados do disco (/api/store):', err));
+      .catch((err) => console.error('Erro ao carregar dados:', err));
   }, []);
 
-  // Salvar no servidor (disco) sempre que houver alterações
+  // Salvar configurações (Supabase e local)
   const handleUpdateStoreSettings = (newSettings: typeof storeSettings) => {
     setStoreSettings(newSettings);
+    syncSettings(newSettings);
     fetch('/api/store', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings: newSettings }),
-    }).catch((err) => console.error('Erro ao salvar settings no disco:', err));
+    }).catch((err) => console.error('Erro ao salvar settings localmente:', err));
   };
 
   const handleUpdateProducts = (updater: (prev: Product[]) => Product[]) => {
@@ -55,7 +56,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: updated }),
-      }).catch((err) => console.error('Erro ao salvar produtos no disco:', err));
+      }).catch((err) => console.error('Erro ao salvar produtos localmente:', err));
       return updated;
     });
   };
@@ -110,11 +111,12 @@ export default function Home() {
   const handleOrderCompleted = (newOrder: OrderData) => {
     setOrders((prev) => {
       const updated = [newOrder, ...prev];
+      syncOrder(newOrder);
       fetch('/api/store', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orders: updated }),
-      }).catch((err) => console.error('Erro ao salvar pedidos no disco:', err));
+      }).catch((err) => console.error('Erro ao salvar pedidos localmente:', err));
       return updated;
     });
     setCart([]); // Clear cart
@@ -123,13 +125,19 @@ export default function Home() {
   // Admin operations com persistência
   const handleToggleSoldOut = (productId: string) => {
     handleUpdateProducts((prev) =>
-      prev.map((p) =>
-        p.id === productId ? { ...p, isSoldOut: !p.isSoldOut } : p
-      )
+      prev.map((p) => {
+        if (p.id === productId) {
+          const updatedProd = { ...p, isSoldOut: !p.isSoldOut };
+          syncProduct(updatedProd);
+          return updatedProd;
+        }
+        return p;
+      })
     );
   };
 
   const handleAddProduct = (newProd: Product) => {
+    syncProduct(newProd);
     handleUpdateProducts((prev) => [newProd, ...prev]);
   };
 

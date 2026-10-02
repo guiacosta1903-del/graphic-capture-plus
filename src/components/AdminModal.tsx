@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Product, OrderData } from '@/types';
 import { X, Plus, ToggleLeft, ToggleRight, Upload, Image as ImageIcon, Settings, ShoppingBag, Check } from 'lucide-react';
+import { uploadImage } from '@/lib/supabase';
 
 interface StoreSettings {
   logoUrl: string | null;
@@ -48,21 +49,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
 
-  // File upload para foto do novo produto (salva arquivo físico no disco)
+  // File upload para foto do novo produto (Supabase Storage com fallback local)
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       setIsUploading(true);
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.url) {
-        setPreviewImage(data.url);
-        setNewImageUrl(data.url);
-      }
+      const url = await uploadImage(file);
+      setPreviewImage(url);
+      setNewImageUrl(url);
     } catch (err) {
       console.error('Erro ao fazer upload da foto:', err);
       alert('Erro ao enviar imagem.');
@@ -71,7 +67,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
-  // File upload para configurações (Logo, Banners) direto para public/uploads
+  // File upload para configurações (Logo, Banners) direto para Supabase Storage
   const handleSettingsImageUpload = async (
     key: 'logoUrl' | 'banner1Image' | 'banner2Image',
     e: React.ChangeEvent<HTMLInputElement>
@@ -81,15 +77,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
     try {
       setIsUploading(true);
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.url) {
-        const updated = { ...settingsData, [key]: data.url };
-        setSettingsData(updated);
-        onUpdateStoreSettings(updated); // Atualiza imediatamente no estado e no disco
-      }
+      const url = await uploadImage(file);
+      const updated = { ...settingsData, [key]: url };
+      setSettingsData(updated);
+      onUpdateStoreSettings(updated);
     } catch (err) {
       console.error('Erro no upload:', err);
       alert('Erro ao enviar imagem.');
