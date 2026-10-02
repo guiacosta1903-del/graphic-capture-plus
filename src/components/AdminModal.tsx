@@ -1,16 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Product, OrderData } from '@/types';
+import { Product, OrderData, StoreSettings } from '@/types';
 import { X, Plus, ToggleLeft, ToggleRight, Upload, Image as ImageIcon, Settings, ShoppingBag, Check, Trash2, MoreHorizontal, ArrowLeft, Edit3 } from 'lucide-react';
 import { uploadImage } from '@/lib/supabase';
-
-interface StoreSettings {
-  logoUrl: string | null;
-  banner1Image: string;
-  banner2Image: string;
-  whatsappNumber: string;
-}
 
 interface AdminModalProps {
   isOpen: boolean;
@@ -67,6 +60,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  React.useEffect(() => {
+    if (storeSettings) {
+      setSettingsData(storeSettings);
+    }
+  }, [storeSettings]);
+
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
 
@@ -74,6 +73,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Preview visual instantâneo imediato
+    const localUrl = URL.createObjectURL(file);
+    setPreviewImage(localUrl);
 
     try {
       setIsUploading(true);
@@ -85,6 +88,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       alert('Erro ao enviar imagem.');
     } finally {
       setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -92,6 +96,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const handleProductSecondaryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const localUrl = URL.createObjectURL(file);
+    setPreviewSecondaryImage(localUrl);
 
     try {
       setIsUploading(true);
@@ -103,6 +110,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       alert('Erro ao enviar imagem secundária.');
     } finally {
       setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -113,6 +121,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const localUrl = URL.createObjectURL(file);
+    setSettingsData((prev) => ({ ...prev, [key]: localUrl }));
 
     try {
       setIsUploading(true);
@@ -125,6 +136,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       alert('Erro ao enviar imagem.');
     } finally {
       setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -182,6 +194,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const localUrl = URL.createObjectURL(file);
+    setEditImageUrl(localUrl);
+
     try {
       setIsUploading(true);
       const url = await uploadImage(file);
@@ -191,6 +206,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       alert('Erro ao enviar imagem.');
     } finally {
       setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -198,6 +214,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const handleEditSecondaryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const localUrl = URL.createObjectURL(file);
+    setEditSecondaryImageUrl(localUrl);
 
     try {
       setIsUploading(true);
@@ -208,6 +227,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       alert('Erro ao enviar imagem secundária.');
     } finally {
       setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -869,69 +889,222 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </div>
             </div>
 
-            {/* Troca das Imagens dos Banners */}
-            <div className="space-y-4 pb-4 border-b border-zinc-100">
-              <label className="block text-xs font-bold text-zinc-800 uppercase tracking-wider">
-                2. Imagens de Fundo dos Banners
-              </label>
+            {/* Banner 1: Catálogo */}
+            <div className="space-y-3 p-4 bg-sky-50/50 rounded-2xl border border-sky-100">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-sky-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-sky-500" />
+                  <span>2. Banner 1: Coleção & Catálogo</span>
+                </label>
+                <span className="text-[10px] font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded-full">
+                  Lado Esquerdo
+                </span>
+              </div>
 
-              {/* Banner 1 */}
+              {/* Foto de Fundo do Banner 1 */}
               <div>
-                <span className="block text-xs font-bold text-zinc-700 mb-1">Banner 1: "Todos os Modelos"</span>
+                <span className="block text-[11px] font-bold text-zinc-600 mb-1">Foto de Fundo</span>
                 <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    value={settingsData.banner1Image}
-                    onChange={(e) => setSettingsData({ ...settingsData, banner1Image: e.target.value })}
-                    className="flex-1 text-xs px-3 py-2 rounded-xl border border-zinc-200"
-                    placeholder="URL ou caminho da imagem do Banner 1"
-                  />
-                  <label className="cursor-pointer bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold py-2 px-3 rounded-xl border border-zinc-300 flex items-center gap-1.5 flex-shrink-0">
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload</span>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={(e) => handleSettingsImageUpload('banner1Image', e)} 
-                    />
-                  </label>
+                  <div className="w-24 h-14 rounded-xl border border-sky-200 overflow-hidden bg-zinc-900 flex-shrink-0 relative">
+                    {settingsData.banner1Image ? (
+                      <img src={settingsData.banner1Image} alt="Preview Banner 1" className="w-full h-full object-cover opacity-80" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[10px] text-zinc-400">Sem foto</div>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={settingsData.banner1Image || ''}
+                        onChange={(e) => setSettingsData({ ...settingsData, banner1Image: e.target.value })}
+                        className="flex-1 text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white"
+                        placeholder="URL da imagem (ex: https://...)"
+                      />
+                      <label className="cursor-pointer bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold py-2 px-3 rounded-xl flex items-center gap-1.5 flex-shrink-0 transition">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          disabled={isUploading}
+                          onChange={(e) => handleSettingsImageUpload('banner1Image', e)} 
+                        />
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Banner 2 */}
-              <div>
-                <span className="block text-xs font-bold text-zinc-700 mb-1">Banner 2: "Adesivos Personalizados"</span>
-                <div className="flex items-center gap-3">
+              {/* Textos do Banner 1 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 mb-1">Tag Superior</label>
                   <input
                     type="text"
-                    value={settingsData.banner2Image}
-                    onChange={(e) => setSettingsData({ ...settingsData, banner2Image: e.target.value })}
-                    className="flex-1 text-xs px-3 py-2 rounded-xl border border-zinc-200"
-                    placeholder="URL ou caminho da imagem do Banner 2"
+                    value={settingsData.banner1Tag ?? 'COLEÇÃO ARQUIBANCADA'}
+                    onChange={(e) => setSettingsData({ ...settingsData, banner1Tag: e.target.value })}
+                    placeholder="COLEÇÃO ARQUIBANCADA"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
                   />
-                  <label className="cursor-pointer bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold py-2 px-3 rounded-xl border border-zinc-300 flex items-center gap-1.5 flex-shrink-0">
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload</span>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={(e) => handleSettingsImageUpload('banner2Image', e)} 
-                    />
-                  </label>
                 </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 mb-1">Título (Linha 1)</label>
+                  <input
+                    type="text"
+                    value={settingsData.banner1Title ?? 'OS MAIORES MODELOS'}
+                    onChange={(e) => setSettingsData({ ...settingsData, banner1Title: e.target.value })}
+                    placeholder="OS MAIORES MODELOS"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 mb-1">Palavra de Destaque Azul (Linha 2)</label>
+                  <input
+                    type="text"
+                    value={settingsData.banner1Highlight ?? 'DO IMORTAL'}
+                    onChange={(e) => setSettingsData({ ...settingsData, banner1Highlight: e.target.value })}
+                    placeholder="DO IMORTAL"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 mb-1">Texto do Botão</label>
+                  <input
+                    type="text"
+                    value={settingsData.banner1ButtonText ?? 'EXPLORAR CATÁLOGO'}
+                    onChange={(e) => setSettingsData({ ...settingsData, banner1ButtonText: e.target.value })}
+                    placeholder="EXPLORAR CATÁLOGO"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-700 mb-1">Descrição do Banner</label>
+                <input
+                  type="text"
+                  value={settingsData.banner1Description ?? 'Adesivos em vinil premium fosco com corte especial. Resistente à água, sol e arranhões.'}
+                  onChange={(e) => setSettingsData({ ...settingsData, banner1Description: e.target.value })}
+                  placeholder="Descrição do Banner 1"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Banner 2: Personalizados & WhatsApp */}
+            <div className="space-y-3 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>3. Banner 2: Personalizados & Torcidas</span>
+                </label>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  Lado Direito (WhatsApp)
+                </span>
+              </div>
+
+              {/* Foto de Fundo do Banner 2 */}
+              <div>
+                <span className="block text-[11px] font-bold text-zinc-600 mb-1">Foto de Fundo</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-24 h-14 rounded-xl border border-emerald-200 overflow-hidden bg-zinc-900 flex-shrink-0 relative">
+                    {settingsData.banner2Image ? (
+                      <img src={settingsData.banner2Image} alt="Preview Banner 2" className="w-full h-full object-cover opacity-80" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[10px] text-zinc-400">Sem foto</div>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={settingsData.banner2Image || ''}
+                        onChange={(e) => setSettingsData({ ...settingsData, banner2Image: e.target.value })}
+                        className="flex-1 text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white"
+                        placeholder="URL da imagem (ex: https://...)"
+                      />
+                      <label className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-xl flex items-center gap-1.5 flex-shrink-0 transition">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          disabled={isUploading}
+                          onChange={(e) => handleSettingsImageUpload('banner2Image', e)} 
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Textos do Banner 2 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 mb-1">Tag Superior</label>
+                  <input
+                    type="text"
+                    value={settingsData.banner2Tag ?? 'CONSULADOS & TORCIDAS'}
+                    onChange={(e) => setSettingsData({ ...settingsData, banner2Tag: e.target.value })}
+                    placeholder="CONSULADOS & TORCIDAS"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 mb-1">Título (Linha 1)</label>
+                  <input
+                    type="text"
+                    value={settingsData.banner2Title ?? 'PERSONALIZE PARA SUA'}
+                    onChange={(e) => setSettingsData({ ...settingsData, banner2Title: e.target.value })}
+                    placeholder="PERSONALIZE PARA SUA"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 mb-1">Palavra de Destaque Verde (Linha 2)</label>
+                  <input
+                    type="text"
+                    value={settingsData.banner2Highlight ?? 'TORCIDA OU BONDE'}
+                    onChange={(e) => setSettingsData({ ...settingsData, banner2Highlight: e.target.value })}
+                    placeholder="TORCIDA OU BONDE"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-700 mb-1">Texto do Botão</label>
+                  <input
+                    type="text"
+                    value={settingsData.banner2ButtonText ?? 'CHAMAR NO WHATSAPP'}
+                    onChange={(e) => setSettingsData({ ...settingsData, banner2ButtonText: e.target.value })}
+                    placeholder="CHAMAR NO WHATSAPP"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-700 mb-1">Descrição do Banner</label>
+                <input
+                  type="text"
+                  value={settingsData.banner2Description ?? 'Produzimos adesivos para caravanas, consulados e torcidas organizadas com sua arte.'}
+                  onChange={(e) => setSettingsData({ ...settingsData, banner2Description: e.target.value })}
+                  placeholder="Descrição do Banner 2"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                />
               </div>
             </div>
 
             {/* WhatsApp de Contato */}
             <div className="space-y-1">
               <label className="block text-xs font-bold text-zinc-800 uppercase tracking-wider">
-                3. WhatsApp de Atendimento
+                4. WhatsApp de Atendimento
               </label>
               <input
                 type="text"
-                value={settingsData.whatsappNumber}
+                value={settingsData.whatsappNumber || ''}
                 onChange={(e) => setSettingsData({ ...settingsData, whatsappNumber: e.target.value })}
                 placeholder="5551999999999 (com DDD)"
                 className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"

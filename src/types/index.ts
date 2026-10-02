@@ -51,3 +51,22 @@ export interface OrderData {
   createdAt?: string;
   trackingCode?: string;
 }
+
+export interface StoreSettings {
+  logoUrl: string | null;
+  banner1Image: string;
+  banner2Image: string;
+  whatsappNumber: string;
+  // Textos personalizáveis do Banner 1
+  banner1Tag?: string;
+  banner1Title?: string;
+  banner1Highlight?: string;
+  banner1Description?: string;
+  banner1ButtonText?: string;
+  // Textos personalizáveis do Banner 2
+  banner2Tag?: string;
+  banner2Title?: string;
+  banner2Highlight?: string;
+  banner2Description?: string;
+  banner2ButtonText?: string;
+}

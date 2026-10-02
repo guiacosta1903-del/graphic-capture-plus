@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { INITIAL_PRODUCTS } from '@/data/products';
-import { Product, CartItem, OrderData } from '@/types';
+import { Product, CartItem, OrderData, StoreSettings } from '@/types';
 import { Header } from '@/components/Header';
 import { PromoBanners } from '@/components/PromoBanners';
 import { ProductCard } from '@/components/ProductCard';
@@ -17,12 +17,22 @@ export default function Home() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<OrderData[]>([]);
 
-  // Store visual settings (Logo, Banners, WhatsApp)
-  const [storeSettings, setStoreSettings] = useState({
+  // Store visual settings (Logo, Banners, WhatsApp, Textos)
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>({
     logoUrl: null as string | null,
     banner1Image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=1000&auto=format&fit=crop&q=80',
     banner2Image: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=1000&auto=format&fit=crop&q=80',
     whatsappNumber: '5551999999999',
+    banner1Tag: 'Coleção Arquibancada',
+    banner1Title: 'TODOS OS',
+    banner1Highlight: 'MODELOS',
+    banner1Description: "Vinil premium laminado à prova d'água, sol e riscos. Ideal para garrafas térmicas, carros e notebooks.",
+    banner1ButtonText: 'Ver modelos disponíveis',
+    banner2Tag: 'Consulados & Torcidas',
+    banner2Title: 'PEDIDO MÍNIMO 50 UNID.',
+    banner2Highlight: 'PERSONALIZADOS',
+    banner2Description: 'Produza o adesivo do seu consulado, núcleo de torcida ou evento com corte especial e acabamento fosco ou brilhante.',
+    banner2ButtonText: 'Fazer orçamento no WhatsApp',
   });
 
   // Carregar dados (localStorage instantâneo + Supabase Cloud) ao iniciar
@@ -40,7 +50,7 @@ export default function Home() {
       if (cachedSettings) {
         const parsed = JSON.parse(cachedSettings);
         if (parsed && typeof parsed === 'object') {
-          setStoreSettings((prev) => ({ ...prev, ...parsed }));
+          setStoreSettings((prev: StoreSettings) => ({ ...prev, ...parsed }));
         }
       }
       const cachedOrders = localStorage.getItem('gremio_stickers_orders');
@@ -64,10 +74,13 @@ export default function Home() {
           } catch {}
         }
         if (data.settings && Object.keys(data.settings).length > 0) {
-          setStoreSettings((prev) => ({ ...prev, ...data.settings }));
-          try {
-            localStorage.setItem('gremio_stickers_settings', JSON.stringify(data.settings));
-          } catch {}
+          setStoreSettings((prev: StoreSettings) => {
+            const merged = { ...prev, ...data.settings };
+            try {
+              localStorage.setItem('gremio_stickers_settings', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
         }
         if (data.orders && data.orders.length > 0) {
           setOrders(data.orders);
@@ -212,6 +225,17 @@ export default function Home() {
           onScrollToCatalog={scrollToCatalog}
           banner1Image={storeSettings.banner1Image}
           banner2Image={storeSettings.banner2Image}
+          banner1Tag={storeSettings.banner1Tag}
+          banner1Title={storeSettings.banner1Title}
+          banner1Highlight={storeSettings.banner1Highlight}
+          banner1Description={storeSettings.banner1Description}
+          banner1ButtonText={storeSettings.banner1ButtonText}
+          banner2Tag={storeSettings.banner2Tag}
+          banner2Title={storeSettings.banner2Title}
+          banner2Highlight={storeSettings.banner2Highlight}
+          banner2Description={storeSettings.banner2Description}
+          banner2ButtonText={storeSettings.banner2ButtonText}
+          whatsappNumber={storeSettings.whatsappNumber}
         />
 
         {/* 2. CATÁLOGO / GRADE DE PRODUTOS (Referência Imagem 2) */}

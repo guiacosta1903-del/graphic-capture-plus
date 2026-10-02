@@ -13,6 +13,8 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const { isSoldOut, name, promoTag, price, pixPrice, id } = product;
   const secondaryImage = product.secondaryImageUrl || (product.images && product.images.length > 1 ? product.images[1] : undefined);
+  const [primaryError, setPrimaryError] = React.useState(false);
+  const [secondaryError, setSecondaryError] = React.useState(false);
 
   return (
     <div className="group relative flex flex-col justify-between bg-white rounded-2xl p-4 transition-all duration-200 border border-zinc-200/80 shadow-sm hover:shadow-md">
@@ -28,21 +30,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }
               : 'group-hover:scale-105'
           }`}
         >
-          {product.imageUrl ? (
+          {product.imageUrl && !primaryError ? (
             <>
               {/* Foto Principal */}
               <img 
                 src={product.imageUrl} 
                 alt={name} 
+                onError={() => setPrimaryError(true)}
                 className={`w-full h-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.18)] select-none transition-all duration-300 ${
-                  secondaryImage ? 'group-hover:opacity-0 group-hover:scale-95' : 'opacity-100'
+                  secondaryImage && !secondaryError ? 'group-hover:opacity-0 group-hover:scale-95' : 'opacity-100'
                 }`}
               />
               {/* Foto Secundária (Exibida no hover ao passar o mouse) */}
-              {secondaryImage && (
+              {secondaryImage && !secondaryError && (
                 <img 
                   src={secondaryImage} 
                   alt={`${name} - foto secundária`} 
+                  onError={() => setSecondaryError(true)}
                   className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.18)] select-none opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none scale-95 group-hover:scale-100"
                 />
               )}
