@@ -14,7 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          cep: string | null
+          city: string | null
+          created_at: string | null
+          customer_cpf: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          id: string
+          items: Json
+          neighborhood: string | null
+          number: string | null
+          shipping_option: Json | null
+          state: string | null
+          status: string | null
+          street: string | null
+          total: number
+        }
+        Insert: {
+          cep?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_cpf?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          id: string
+          items: Json
+          neighborhood?: string | null
+          number?: string | null
+          shipping_option?: Json | null
+          state?: string | null
+          status?: string | null
+          street?: string | null
+          total: number
+        }
+        Update: {
+          cep?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_cpf?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          items?: Json
+          neighborhood?: string | null
+          number?: string | null
+          shipping_option?: Json | null
+          state?: string | null
+          status?: string | null
+          street?: string | null
+          total?: number
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string | null
+          is_featured: boolean | null
+          is_sold_out: boolean | null
+          name: string
+          pix_price: number
+          price: number
+          promo_tag: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          is_sold_out?: boolean | null
+          name: string
+          pix_price: number
+          price: number
+          promo_tag?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          is_sold_out?: boolean | null
+          name?: string
+          pix_price?: number
+          price?: number
+          promo_tag?: string | null
+        }
+        Relationships: []
+      }
+      store_settings: {
+        Row: {
+          banner1_image: string | null
+          banner2_image: string | null
+          id: number
+          logo_url: string | null
+          updated_at: string | null
+          whatsapp_number: string | null
+        }
+        Insert: {
+          banner1_image?: string | null
+          banner2_image?: string | null
+          id?: number
+          logo_url?: string | null
+          updated_at?: string | null
+          whatsapp_number?: string | null
+        }
+        Update: {
+          banner1_image?: string | null
+          banner2_image?: string | null
+          id?: number
+          logo_url?: string | null
+          updated_at?: string | null
+          whatsapp_number?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
